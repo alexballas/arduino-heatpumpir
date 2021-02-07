@@ -12,8 +12,8 @@ void CarrierHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t operati
 // The different models just set the model accordingly
 CarrierNQVHeatpumpIR::CarrierNQVHeatpumpIR() : CarrierHeatpumpIR()
 {
-  static const char PROGMEM model[] PROGMEM = "carrier_nqv";
-  static const char PROGMEM info[]  PROGMEM = "{\"mdl\":\"carrier_nqv\",\"dn\":\"Carrier NQV\",\"mT\":17,\"xT\":30,\"fs\":6}";
+  static const char model[] PROGMEM = "carrier_nqv";
+  static const char info[]  PROGMEM = "{\"mdl\":\"carrier_nqv\",\"dn\":\"Carrier NQV\",\"mT\":17,\"xT\":30,\"fs\":6}";
 
   _model = model;
   _info = info;
@@ -21,11 +21,34 @@ CarrierNQVHeatpumpIR::CarrierNQVHeatpumpIR() : CarrierHeatpumpIR()
 
 CarrierMCAHeatpumpIR::CarrierMCAHeatpumpIR() : CarrierHeatpumpIR()
 {
-  static const char PROGMEM model[] PROGMEM = "carrier_mca";
-  static const char PROGMEM info[]  PROGMEM = "{\"mdl\":\"carrier_mca\",\"dn\":\"Carrier MCA\",\"mT\":17,\"xT\":30,\"fs\":4}";
+  static const char model[] PROGMEM = "carrier_mca";
+  static const char info[]  PROGMEM = "{\"mdl\":\"carrier_mca\",\"dn\":\"Carrier MCA\",\"mT\":17,\"xT\":30,\"fs\":4}";
 
   _model = model;
   _info = info;
+  _carrierModel = MODEL_CARRIER_MCA;
+}
+
+Qlima1HeatpumpIR::Qlima1HeatpumpIR() : CarrierMCAHeatpumpIR()
+{
+  static const char model[] PROGMEM = "qlima_1";
+  static const char info[]  PROGMEM = "{\"mdl\":\"qlima_1\",\"dn\":\"Qlima #1\",\"mT\":17,\"xT\":30,\"fs\":4, \"maint\":[10]}";
+
+  _model = model;
+  _info = info;
+
+  _carrierModel = MODEL_QLIMA_1;
+}
+
+Qlima2HeatpumpIR::Qlima2HeatpumpIR() : CarrierMCAHeatpumpIR()
+{
+  static const char model[] PROGMEM = "qlima_2";
+  static const char info[]  PROGMEM = "{\"mdl\":\"qlima_2\",\"dn\":\"Qlima #2\",\"mT\":17,\"xT\":30,\"fs\":4, \"maint\":[10]}";
+
+  _model = model;
+  _info = info;
+
+  _carrierModel = MODEL_QLIMA_2;
 }
 
 
@@ -190,6 +213,12 @@ void CarrierNQVHeatpumpIR::sendCarrier(IRSender& IR, uint8_t operatingMode, uint
 
 void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t operatingModeCmd, uint8_t fanSpeedCmd, uint8_t temperatureCmd, uint8_t swingVCmd, uint8_t swingHCmd)
 {
+  send(IR, powerModeCmd, operatingModeCmd, fanSpeedCmd, temperatureCmd, swingVCmd, swingHCmd, false);
+}
+
+
+void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t operatingModeCmd, uint8_t fanSpeedCmd, uint8_t temperatureCmd, uint8_t swingVCmd, uint8_t swingHCmd, bool turboMode)
+{
   (void)swingVCmd;
   (void)swingHCmd;
 
@@ -199,6 +228,7 @@ void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t oper
   uint8_t operatingMode = CARRIER_AIRCON2_MODE_COOL;
   uint8_t fanSpeed = CARRIER_AIRCON2_FAN_AUTO;
   uint8_t temperature = 23;
+  bool maintenanceMode = false;
 
   if (powerModeCmd == POWER_OFF)
   {
@@ -218,6 +248,9 @@ void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t oper
       case MODE_COOL:
         operatingMode = CARRIER_AIRCON2_MODE_COOL;
         break;
+      case MODE_HEAT:
+        operatingMode = CARRIER_AIRCON2_MODE_HEAT;
+        break;
       case MODE_DRY:
         operatingMode = CARRIER_AIRCON2_MODE_DRY;
 		    fanSpeed = CARRIER_AIRCON2_FAN_DRY_AUTO; // Fan speed is always 'AUTO' in DRY mode
@@ -225,6 +258,9 @@ void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t oper
       case MODE_FAN:
         operatingMode = CARRIER_AIRCON2_MODE_FAN;
         temperature = 31; // Temperature is always 31 in FAN mode
+        break;
+      case MODE_MAINT:
+        maintenanceMode = true;
         break;
     }
 
@@ -255,12 +291,16 @@ void CarrierMCAHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t oper
     }
   }
 
-  sendCarrier(IR, powerMode, operatingMode, fanSpeed, temperature);
+  sendCarrier(IR, powerMode, operatingMode, fanSpeed, temperature, maintenanceMode, turboMode);
 }
 
-void CarrierMCAHeatpumpIR::sendCarrier(IRSender& IR, uint8_t powerMode, uint8_t operatingMode, uint8_t fanSpeed, uint8_t temperature)
+void CarrierMCAHeatpumpIR::sendCarrier(IRSender& IR, uint8_t powerMode, uint8_t operatingMode, uint8_t fanSpeed, uint8_t temperature, bool maintenanceMode, bool turboMode)
 {
   uint8_t sendBuffer[] = { 0x4D, 0xB2, 0xD8, 0x00, 0x00, 0x00 };
+  static const uint8_t sendBufferMaintenance1[] PROGMEM = { 0xAD, 0x52, 0xAF, 0x50, 0xB5, 0x4A };
+  static const uint8_t sendBufferMaintenance2[] PROGMEM = { 0xAD, 0x52, 0xAF, 0x50, 0x55, 0xAA };
+  static const uint8_t sendBufferTurbo[]        PROGMEM = { 0xAD, 0x52, 0xAF, 0x50, 0x45, 0xBA };
+
   static const uint8_t temperatures[] PROGMEM = { 0, 8, 12, 4, 6, 14, 10, 2, 3, 11, 9, 1, 5, 13, 7 };
 
   sendBuffer[2] |= powerMode | fanSpeed;
@@ -272,6 +312,20 @@ void CarrierMCAHeatpumpIR::sendCarrier(IRSender& IR, uint8_t powerMode, uint8_t 
   sendBuffer[3] = ~sendBuffer[2];
   sendBuffer[5] = ~sendBuffer[4];
 
+  // Maintenance or turbo mode overide
+  if (maintenanceMode && _carrierModel == MODEL_QLIMA_1)
+  {
+    memcpy_P(sendBuffer, sendBufferMaintenance1, sizeof(sendBufferMaintenance1));    
+  }
+  if (maintenanceMode && _carrierModel == MODEL_QLIMA_2)
+  {
+    memcpy_P(sendBuffer, sendBufferMaintenance2, sizeof(sendBufferMaintenance2));    
+  }  
+  if (turboMode && (_carrierModel == MODEL_QLIMA_1 || _carrierModel == MODEL_QLIMA_2))
+  {
+    memcpy_P(sendBuffer, sendBufferTurbo, sizeof(sendBufferTurbo));
+  }
+  
   // 38 kHz PWM frequency
   IR.setFrequency(38);
 
@@ -285,6 +339,8 @@ void CarrierMCAHeatpumpIR::sendCarrier(IRSender& IR, uint8_t powerMode, uint8_t 
   }
 
   // New header
+  IR.mark(CARRIER_AIRCON2_BIT_MARK);
+  IR.space(CARRIER_AIRCON2_HDR_SPACE);
   IR.mark(CARRIER_AIRCON2_HDR_MARK);
   IR.space(CARRIER_AIRCON2_HDR_SPACE);
 

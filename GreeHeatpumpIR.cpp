@@ -7,8 +7,8 @@ GreeHeatpumpIR::GreeHeatpumpIR() : HeatpumpIR()
 
 GreeGenericHeatpumpIR::GreeGenericHeatpumpIR() : GreeHeatpumpIR()
 {
-  static const char PROGMEM model[] PROGMEM = "gree";
-  static const char PROGMEM info[]  PROGMEM = "{\"mdl\":\"gree\",\"dn\":\"Gree\",\"mT\":16,\"xT\":30,\"fs\":3}";
+  static const char model[] PROGMEM = "gree";
+  static const char info[]  PROGMEM = "{\"mdl\":\"gree\",\"dn\":\"Gree\",\"mT\":16,\"xT\":30,\"fs\":3}";
 
   _model = model;
   _info = info;
@@ -17,12 +17,23 @@ GreeGenericHeatpumpIR::GreeGenericHeatpumpIR() : GreeHeatpumpIR()
 
 GreeYANHeatpumpIR::GreeYANHeatpumpIR() : GreeHeatpumpIR()
 {
-  static const char PROGMEM model[] PROGMEM = "greeyan";
-  static const char PROGMEM info[]  PROGMEM = "{\"mdl\":\"greeyan\",\"dn\":\"Gree YAN\",\"mT\":16,\"xT\":30,\"fs\":3}";
+  static const char model[] PROGMEM = "greeyan";
+  static const char info[]  PROGMEM = "{\"mdl\":\"greeyan\",\"dn\":\"Gree YAN\",\"mT\":16,\"xT\":30,\"fs\":3}";
 
   _model = model;
   _info = info;
   greeModel = GREE_YAN;
+}
+
+// Support for YAA1FB, FAA1FB1, YB1F2 remotes
+GreeYAAHeatpumpIR::GreeYAAHeatpumpIR() : GreeHeatpumpIR()
+{
+  static const char model[] PROGMEM = "greeyaa";
+  static const char info[]  PROGMEM = "{\"mdl\":\"greeyaa\",\"dn\":\"Gree YAA\",\"mT\":16,\"xT\":30,\"fs\":3}";
+
+  _model = model;
+  _info = info;
+  greeModel = GREE_YAA;
 }
 
 void GreeHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t operatingModeCmd, uint8_t fanSpeedCmd, uint8_t temperatureCmd, uint8_t swingVCmd, uint8_t swingHCmd)
@@ -115,6 +126,34 @@ void GreeHeatpumpIR::send(IRSender& IR, uint8_t powerModeCmd, uint8_t operatingM
     }
   }
 
+  if (greeModel == GREE_YAA)
+  {
+    switch (swingVCmd)
+    {
+      case VDIR_AUTO:
+        swingV = GREE_VDIR_AUTO;
+        break;
+      case VDIR_SWING:
+        swingV = GREE_VDIR_SWING;
+        break;
+      case VDIR_UP:
+        swingV = GREE_VDIR_UP;
+        break;
+      case VDIR_MUP:
+        swingV = GREE_VDIR_MUP;
+        break;
+      case VDIR_MIDDLE:
+        swingV = GREE_VDIR_MIDDLE;
+        break;
+      case VDIR_MDOWN:
+        swingV = GREE_VDIR_MDOWN;
+        break;
+      case VDIR_DOWN:
+        swingV = GREE_VDIR_DOWN;
+        break;
+    }
+  }
+
 
   if (temperatureCmd > 15 && temperatureCmd < 31)
   {
@@ -152,26 +191,46 @@ void GreeHeatpumpIR::sendGree(IRSender& IR, uint8_t powerMode, uint8_t operating
 
     GreeTemplate[4] = swingV;
   }
+  if (greeModel == GREE_YAA)
+  {
+//    GreeTemplate[2] = 0xE0; // bits 0..3 always 0000, bits 4..7 TURBO,LIGHT,HEALTH,X-FAN
+    GreeTemplate[2] = 0x20; // bits 0..3 always 0000, bits 4..7 TURBO,LIGHT,HEALTH,X-FAN
+    GreeTemplate[3] = 0x50; // bits 4..7 always 0101
+    GreeTemplate[6] = 0x20; // YAA1FB, FAA1FB1, YB1F2 bits 4..7 always 0010
+
+    if (turboMode)
+    {
+      GreeTemplate[2] |= (1 << 4); // Set bit 4 (TURBO)
+    }
+    if (swingV == GREE_VDIR_SWING)
+    {
+      GreeTemplate[0] |= (1 << 6); // Enable swing by setting bit 6
+    }
+    else if (swingV != GREE_VDIR_AUTO)
+    {
+      GreeTemplate[5] = swingV;
+    }
+  }
 
   // Calculate the checksum
   if (greeModel == GREE_YAN)
   {
- 	  GreeTemplate[7] = (
+    GreeTemplate[7] = (
       (GreeTemplate[0] << 4) +
       (GreeTemplate[1] << 4) +
       0xC0);
   }
   else
   {
-    GreeTemplate[7] = (
+    GreeTemplate[7] = (((
      (GreeTemplate[0] & 0x0F) +
      (GreeTemplate[1] & 0x0F) +
-		 (GreeTemplate[2] & 0x0F) +
+     (GreeTemplate[2] & 0x0F) +
      (GreeTemplate[3] & 0x0F) +
-		 (GreeTemplate[5] & 0xF0) >> 4 +
-     (GreeTemplate[6] & 0xF0) >> 4 +
-		 (GreeTemplate[7] & 0xF0) >> 4 +
-      0x0A) & 0xF0;
+     ((GreeTemplate[5] & 0xF0) >> 4) +
+     ((GreeTemplate[6] & 0xF0) >> 4) +
+     ((GreeTemplate[7] & 0xF0) >> 4) +
+      0x0A) & 0x0F) << 4) | (GreeTemplate[7] & 0x0F);
   }
 
   // 38 kHz PWM frequency

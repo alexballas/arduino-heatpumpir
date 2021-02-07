@@ -2,8 +2,8 @@
 
 FujitsuHeatpumpIR::FujitsuHeatpumpIR() : HeatpumpIR()
 {
-  static const char PROGMEM model[] PROGMEM = "fujitsu_awyz";
-  static const char PROGMEM info[]  PROGMEM = "{\"mdl\":\"fujitsu_awyz\",\"dn\":\"Fujitsu AWYZ\",\"mT\":16,\"xT\":30,\"fs\":5}";
+  static const char model[] PROGMEM = "fujitsu_awyz";
+  static const char info[]  PROGMEM = "{\"mdl\":\"fujitsu_awyz\",\"dn\":\"Fujitsu AWYZ\",\"mT\":16,\"xT\":30,\"fs\":5}";
 
   _model = model;
   _info = info;
@@ -104,15 +104,6 @@ void FujitsuHeatpumpIR::sendFujitsu(IRSender& IR, uint8_t operatingMode, uint8_t
   uint8_t OFF_msg[] = { 0x14, 0x63, 0x00, 0x10, 0x10, 0x02, 0xFD };
   uint8_t checksum = 0x00;
 
-/*
-
-  Fujitsu does not have codes to set the air direction to any specific position, but just go to the next position:
-
-  uint8_t nextVerticalPosition_msg[] = { 0x14, 0x63, 0x00, 0x10, 0x10, 0x6C, 0x93 };
-  uint8_t nextHorizontalPosition_msg[] = { 0x14, 0x63, 0x00, 0x10, 0x10, 0x79,0x86 };
-
-  These would need to be sent separately...
-*/
   // Set the operatingmode on the template message
   FujitsuTemplate[9] = operatingMode;
 
@@ -204,6 +195,20 @@ void FujitsuHeatpumpIR::sendFujitsuSuperQuiet(IRSender& IR)
   sendFujitsuMsg(IR, sizeof(SuperQuiet_msg), SuperQuiet_msg);
 }
 
+void FujitsuHeatpumpIR::sendNextVerticalPosition(IRSender& IR)
+{
+  uint8_t NextVerticalPosition_msg[] = { 0x14, 0x63, 0x00, 0x10, 0x10, 0x6C, 0x93 };
+
+  sendFujitsuMsg(IR, sizeof(NextVerticalPosition_msg), NextVerticalPosition_msg);
+}
+
+void FujitsuHeatpumpIR::sendNextHorizontalPosition(IRSender& IR)
+{
+  uint8_t NextHorizontalPosition_msg[] = { 0x14, 0x63, 0x00, 0x10, 0x10, 0x79, 0x86 };
+
+  sendFujitsuMsg(IR, sizeof(NextHorizontalPosition_msg), NextHorizontalPosition_msg);
+}
+
 
 void FujitsuHeatpumpIR::sendFujitsuTestRun(IRSender& IR)
 {
@@ -215,7 +220,7 @@ void FujitsuHeatpumpIR::sendFujitsuTestRun(IRSender& IR)
 
 void FujitsuHeatpumpIR::sendFujitsuMsg(IRSender& IR, uint8_t msgSize, uint8_t *msg)
 {
-  // 40 kHz PWM frequency
+  // 38 kHz PWM frequency
   IR.setFrequency(38);
 
   // Header

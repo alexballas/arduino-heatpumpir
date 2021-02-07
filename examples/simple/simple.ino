@@ -10,6 +10,7 @@
 #include <SharpHeatpumpIR.h>
 #include <DaikinHeatpumpIR.h>
 #include <MitsubishiHeavyHeatpumpIR.h>
+#include <MitsubishiSEZKDXXHeatpumpIR.h>
 #include <HyundaiHeatpumpIR.h>
 #include <HisenseHeatpumpIR.h>
 #include <GreeHeatpumpIR.h>
@@ -17,6 +18,10 @@
 #include <ToshibaHeatpumpIR.h>
 #include <ToshibaDaiseikaiHeatpumpIR.h>
 #include <IVTHeatpumpIR.h>
+#include <HitachiHeatpumpIR.h>
+#include <BalluHeatpumpIR.h>
+#include <AUXHeatpumpIR.h>
+#include <ZHLT01HeatpumpIR.h>
 
 
 #ifndef ESP8266
@@ -32,13 +37,15 @@ HeatpumpIR *heatpumpIR[] = {new PanasonicCKPHeatpumpIR(), new PanasonicDKEHeatpu
                             new PanasonicNKEHeatpumpIR(), new PanasonicLKEHeatpumpIR(),
                             new CarrierNQVHeatpumpIR(), new CarrierMCAHeatpumpIR(),
                             new MideaHeatpumpIR(), new FujitsuHeatpumpIR(),
-                            new MitsubishiFDHeatpumpIR(), new MitsubishiFEHeatpumpIR(), new MitsubishiMSYHeatpumpIR(),
-                            new SamsungHeatpumpIR(), new SharpHeatpumpIR(), new DaikinHeatpumpIR(),
+                            new MitsubishiFDHeatpumpIR(), new MitsubishiFEHeatpumpIR(), new MitsubishiMSYHeatpumpIR(), new MitsubishiFAHeatpumpIR(),
+                            new SamsungAQVHeatpumpIR(), new SamsungFJMHeatpumpIR(),new SharpHeatpumpIR(), new DaikinHeatpumpIR(),
                             new MitsubishiHeavyZJHeatpumpIR(), new MitsubishiHeavyZMHeatpumpIR(),
+                            new MitsubishiSEZKDXXHeatpumpIR(),
                             new HyundaiHeatpumpIR(), new HisenseHeatpumpIR(),
-                            new GreeGenericHeatpumpIR(), new GreeYANHeatpumpIR(),
+                            new GreeGenericHeatpumpIR(), new GreeYANHeatpumpIR(), new GreeYAAHeatpumpIR(),
                             new FuegoHeatpumpIR(), new ToshibaHeatpumpIR(), new ToshibaDaiseikaiHeatpumpIR(),
-                            new IVTHeatpumpIR(),
+                            new IVTHeatpumpIR(), new HitachiHeatpumpIR(),
+                            new BalluHeatpumpIR(), new AUXHeatpumpIR(), new ZHLT01HeatpumpIR(), 
                             NULL};
 
 void setup()
